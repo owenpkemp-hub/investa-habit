@@ -285,6 +285,7 @@ footer{color:var(--faint);font-size:13px;margin-top:26px;line-height:1.6}
           <label class="field" for="f-freq">How often</label>
           <select id="f-freq">
             <option value="daily">Every day</option>
+            <option value="weekdays">Every weekday (Mon–Fri)</option>
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
             <option value="every">Every N days</option>
@@ -428,6 +429,7 @@ function save() {
 
 function isDueOn(ac, d) {
   if (ac.freq === 'daily') return true;
+  if (ac.freq === 'weekdays') { var dow = d.getDay(); return dow >= 1 && dow <= 5; }
   if (ac.freq === 'weekly') return d.getDay() === ac.weekday;
   if (ac.freq === 'monthly') return d.getDate() === ac.dom;
   if (ac.freq === 'every') {
@@ -457,6 +459,7 @@ function nextDue(ac, from) {
 }
 function freqLabel(ac) {
   if (ac.freq === 'daily') return 'daily';
+  if (ac.freq === 'weekdays') return 'every weekday';
   if (ac.freq === 'weekly') return 'every ' + DAYS[ac.weekday];
   if (ac.freq === 'monthly') return 'on day ' + ac.dom + ' each month';
   return 'every ' + ac.everyN + ' days';
