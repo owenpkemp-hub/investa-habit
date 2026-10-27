@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>investa-habit</title>
+<meta name="description" content="A simple daily check-in tracker for your investing habit. Your data stays in this browser.">
+<meta name="theme-color" content="#0A0A0B">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-title" content="investa-habit">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+/* Obsidian product system — investa-habit. One accent: mint #35C98E. No blends, no glows, no card soup. */
+:root{
+  --bg:#0A0A0B; --panel:#0E0E10; --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.16);
+  --ink:#F5F5F4; --mut:#A1A1AA; --faint:#71717A;
+  --accent:#35C98E; --accent-ink:#0A0A0B;
+  --grotesk:-apple-system,"SF Pro Display","Helvetica Neue",Inter,system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:var(--grotesk);font-variant-numeric:tabular-nums;line-height:1.5;
+  -webkit-font-smoothing:antialiased;min-height:100vh;
+}
+::selection{background:var(--accent);color:var(--accent-ink)}
+.obs-noise{position:fixed;inset:0;z-index:2000;pointer-events:none;opacity:.04;filter:url(#obs-noise)}
+.wrap{max-width:680px;margin:0 auto;padding:24px 20px 64px;container-type:inline-size}
+
+/* ---------- sticky header, logo mark removed ---------- */
+header{
+  display:flex;align-items:center;gap:12px;
+  position:sticky;top:0;z-index:20;
+  background:#0A0A0B;background:color-mix(in srgb,#0A0A0B 82%,transparent);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);padding:14px 0;margin-bottom:4px;
+}
+header svg{display:none}
+header h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+header p{margin:2px 0 0;color:var(--mut);font-size:13px}
+
+/* ---------- hero: left-aligned, mono streak numeral, no card ---------- */
+.hero{background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:24px 0 18px;margin-bottom:0}
+.eyebrow{color:var(--mut);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin:0 0 8px}
+.hero .streak{font-family:var(--mono);font-size:clamp(44px,12vw,72px);font-weight:600;letter-spacing:-.02em;line-height:1;color:var(--accent)}
+.hero .streak-label{font-size:15px;font-weight:650;margin-top:4px}
+.hero p{color:var(--mut);margin:10px 0 0;font-size:14.5px;line-height:1.6;max-width:52ch}
+.stats{display:flex;gap:20px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.stat{background:transparent;border:0;border-radius:0;padding:0;flex:1;min-width:120px}
+.stat b{display:block;font-family:var(--mono);font-size:20px;font-weight:600;color:var(--ink)}
+.stat span{color:var(--mut);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+
+/* ---------- sections: hairlines and whitespace, not cards ---------- */
+.card{background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:22px 0;margin-bottom:0}
+h2{font-size:18px;font-weight:650;letter-spacing:-.015em;margin:0 0 12px}
+.muted{color:var(--mut)}
+.empty{padding:14px 0;color:var(--mut)}
+.empty b{color:var(--ink);display:block;margin-bottom:2px;font-size:15px;font-weight:650}
+
+/* ---------- rows ---------- */
+.row{display:flex;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line)}
+.row:first-child{border-top:0;padding-top:0}
+.row:last-child{padding-bottom:0}
+.row:has(.done-mark) .grow b{color:var(--mut)}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.grow{flex:1;min-width:0}
+.grow b{display:block;font-size:15px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grow span{color:var(--mut);font-size:13px}
+button{cursor:pointer;border:1px solid var(--line2);border-radius:8px;padding:9px 14px;font-weight:650;font-size:14px;background:transparent;color:var(--ink);transition:border-color 150ms ease}
+button:hover{border-color:var(--accent)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn-gold{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn-mint{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line2)}
+.btn-small{padding:6px 12px;font-size:13px}
+.btn-danger{background:transparent;color:var(--mut);border:1px solid var(--line)}
+input,select{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:11px 12px;font-size:15px;outline:none;transition:border-color 150ms ease}
+input:focus,select:focus{border-color:var(--accent)}
+input[type=number]{font-family:var(--mono)}
+label{display:block;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:12px 0 6px}
+.field-row{display:flex;gap:10px}
+.field-row>div{flex:1}
+.swatches{display:flex;gap:10px;flex-wrap:wrap}
+.swatches input{position:absolute;opacity:0;width:0;height:0}
+.swatches label{margin:0;cursor:pointer;text-transform:none;letter-spacing:0}
+.swatches span{display:block;width:28px;height:28px;border-radius:50%;border:2px solid transparent;transition:border-color 150ms ease}
+.swatches input:checked+span{border-color:var(--accent)}
+.due-amount{width:110px}
+.due-note{flex:1}
+.done-mark{color:var(--accent);font-weight:700}
+
+/* ---------- heatmap: thin cells, muted single-hue scale (cell colors come from JS data) ---------- */
+.heat{display:grid;grid-template-rows:repeat(7,12px);grid-auto-flow:column;grid-auto-columns:12px;gap:3px;overflow-x:auto;padding-bottom:4px}
+.cell{width:12px;height:12px;border-radius:2px;background:rgba(255,255,255,.06)}
+.legend{display:flex;align-items:center;gap:4px;color:var(--mut);font-size:12px;margin-top:8px}
+.legend i{display:block;width:12px;height:12px;border-radius:2px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.filters button{padding:6px 12px;font-size:13px;background:transparent;color:var(--mut);border:1px solid var(--line)}
+.filters button.on{background:transparent;color:var(--ink);border-color:var(--accent)}
+
+/* ---------- accounts: thin-stroke rings ---------- */
+.acct{display:flex;gap:14px;align-items:flex-start}
+.ring{position:relative;width:64px;height:64px;flex:none}
+.ring span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:600;font-size:14px}
+
+/* ---------- milestones: hairline-divided numerals, not cards ---------- */
+.badges{display:flex;gap:16px;flex-wrap:wrap}
+@container (min-width:560px){.badges{flex-wrap:nowrap}}
+.badge{flex:1;min-width:110px;text-align:left;border:0;border-left:1px solid var(--line);border-radius:0;padding:2px 0 2px 12px;background:transparent}
+.badge:first-child{border-left:0;padding-left:0}
+.badge b{display:block;font-family:var(--mono);font-size:22px;font-weight:600}
+.badge span{color:var(--mut);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.badge.unlocked b{color:var(--accent)}
+.badge.locked b{color:var(--mut)}
+.hist-note{color:var(--mut);font-size:13px}
+footer{color:var(--faint);font-size:13px;margin-top:24px}
+@media(max-width:520px){.due-note{display:none}}
+
+
+
+/* ---------- visuals: hand-rolled SVG, zero libraries ---------- */
+.viz{padding:22px 0;border-top:1px solid var(--line)}
+.viz:first-child{border-top:0;padding-top:0}
+.viz h3{font-size:16px;font-weight:650;letter-spacing:-.01em;margin:0 0 12px}
+.viz-cap{color:var(--mut);font-size:13px;margin:12px 0 0;line-height:1.6}
+.viz svg{display:block;width:100%;height:auto}
+.viz text{font-family:var(--mono)}
+.tapestry-wrap{max-width:340px;margin:0 auto}
+.demo-banner{display:none;border:1px solid var(--line2);border-radius:8px;padding:10px 14px;margin:0 0 16px}
+.demo-banner b{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--accent)}
+.demo-banner span{color:var(--mut);font-size:13px}
+.demo-note{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--accent);margin:0 0 14px}
+@media (prefers-reduced-motion:no-preference){
+  .stitch{animation:viz-in 500ms var(--ease-spring) both}
+  .bar-grow{animation:viz-bar 600ms var(--ease-spring) both}
+  .viz-fade{animation:viz-in 600ms var(--ease-spring) both}
+  @keyframes viz-in{from{opacity:0;transform:translateY(6px) scale(.96)}to{opacity:1;transform:none}}
+  @keyframes viz-bar{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+}
+
+/* ---------- motion system: native APIs only, enhancement-only ---------- */
+:root{ --ease-out:cubic-bezier(.22,1,.36,1); --ease-spring:var(--ease-out); }
+@supports (transition-timing-function:linear(0,1)){
+  :root{ --ease-spring:linear(0,.1 10%,.3 22%,.55 36%,.76 50%,.89 62%,.97 74%,1.004 84%,1 92%,1); }
+}
+@media (prefers-reduced-motion:no-preference){
+  ::view-transition-old(root), ::view-transition-new(root){ animation-duration:280ms; animation-timing-function:var(--ease-spring); }
+  ::view-transition-old(hero-num), ::view-transition-new(hero-num){ animation-duration:300ms; animation-timing-function:var(--ease-spring); }
+  .hero .streak{ view-transition-name:hero-num; }
+  .row{ transition:opacity 200ms var(--ease-spring), transform 200ms var(--ease-spring); }
+  @starting-style{ .row{ opacity:0; transform:translateY(6px); } }
+  .row.is-leaving{ opacity:0 !important; transform:translateY(-4px) !important; }
+  .obs-progress{ position:fixed; top:0; left:0; height:2px; width:100%; background:var(--accent); transform-origin:0 50%; transform:scaleX(0); z-index:100; }
+}
+@supports (animation-timeline:view()){
+  @media (prefers-reduced-motion:no-preference){
+    .card{ animation:obs-reveal 600ms var(--ease-spring) both; animation-timeline:view(); animation-range:entry 0% cover 30%; }
+    .card:nth-of-type(3){ animation-range:entry 8% cover 34%; }
+    .card:nth-of-type(4){ animation-range:entry 16% cover 38%; }
+    @keyframes obs-reveal{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:translateY(0); } }
+  }
+}
+@supports (animation-timeline:scroll()){
+  @media (prefers-reduced-motion:no-preference){
+    .obs-progress{ animation:obs-progress linear both; animation-timeline:scroll(root); }
+    @keyframes obs-progress{ to{ transform:scaleX(1); } }
+  }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><filter id="obs-noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter></defs></svg><div class="obs-noise" aria-hidden="true"></div><div class="obs-progress" aria-hidden="true"></div>
+<div class="wrap">
+  <header>
+    <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="20" fill="#F5C451"/><path d="M22 30 L22 16" stroke="#3DDC97" stroke-width="2.5" stroke-linecap="round"/><path d="M22 20 C17 20 14 16 13 12 C18 12 21 15 22 20 Z" fill="#3DDC97"/><path d="M22 20 C27 20 30 16 31 12 C26 12 23 15 22 20 Z" fill="#3DDC97"/><ellipse cx="22" cy="32" rx="6" ry="2.5" fill="#3DDC97"/></svg>
+    <div>
+      <h1>investa-habit</h1>
+      <p>Small steps, every day. Open, check in, watch it grow.</p>
+    </div>
+  </header>
+  <div class="demo-banner" id="demo-banner" style="display:none">
+    <b>DEMO DATA</b> <span>Showing example accounts and check-ins. Your real data is untouched.</span>
+    <button class="btn-ghost btn-small" data-demo-toggle style="margin-left:8px">Clear demo</button>
+  </div>
+
+
+  <!-- Baked hero: the no-script face of the app. JS replaces these numbers on load. -->
+  <section class="hero" id="hero">
+    <p class="eyebrow">Your streak</p>
+    <div class="streak">0</div>
+    <div class="streak-label">day streak</div>
+    <p>Add your first account below, then check in each day it comes due. Your streak grows with every check-in.</p>
+    <div class="stats">
+      <div class="stat"><b>$0.00</b><span>Total contributed</span></div>
+      <div class="stat"><b>0</b><span>Check-ins logged</span></div>
+      <div class="stat"><b>Nothing due yet</b><span>Due today</span></div>
+    </div>
+  </section>
+
+  <section class="card" id="today-card">
+    <h2>Due today</h2>
+    <div id="today-list">
+      <div class="empty"><b>Nothing due yet</b>Add an account below and its due days will show up here.</div>
+    </div>
+  </section>
+
+  <section class="card" id="accounts-card">
+    <h2>Your accounts</h2>
+    <div id="accounts-list">
+      <div class="empty"><b>No accounts yet</b>Your accounts and their streaks will live here.</div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Check-in calendar</h2>
+    <div class="filters" id="heat-filters">
+      <button class="on" data-heat="all">All accounts</button>
+    </div>
+    <div id="heatmap">
+      <div class="empty"><b>Your grid is waiting</b>Each day you check in will light up a square here.</div>
+    </div>
+    <div class="legend"><span>Less</span><i style="background:#22314a"></i><i style="background:#1d7a5f"></i><i style="background:#25a07a"></i><i style="background:#3ddc97"></i><span>More</span></div>
+  </section>
+
+  <section class="card">
+    <h2>Milestones</h2>
+    <div class="badges" id="badges">
+      <div class="badge locked"><b>7</b><span>day streak</span></div>
+      <div class="badge locked"><b>30</b><span>day streak</span></div>
+      <div class="badge locked"><b>100</b><span>day streak</span></div>
+      <div class="badge locked"><b>365</b><span>day streak</span></div>
+    </div>
+    <p class="muted" style="font-size:13px;margin:10px 0 0">Badges unlock from your longest streak and stay unlocked.</p>
+  </section>
+
+  <section class="card" id="visuals-card">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <h2 style="margin:0">Visuals</h2>
+      <button class="btn-ghost btn-small" data-demo-toggle>View demo</button>
+    </div>
+    <p class="muted" style="font-size:13px;margin:8px 0 0">Graphs, charts, and your tapestry — all built from your check-ins.</p>
+    <div id="visuals-body" style="margin-top:8px">
+      <div class="empty"><b>Your visuals live here</b>Check in on a due day and your tapestry, charts, and graphs will grow here.</div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>History</h2>
+    <div id="history-list">
+      <div class="empty"><b>No check-ins yet</b>Tap a due item above to log your first one.</div>
+    </div>
+  </section>
+
+  <section class="card" id="form-card">
+    <h2 id="form-title">Add an account</h2>
+    <form id="account-form">
+      <label for="f-name">Account name</label>
+      <input id="f-name" type="text" maxlength="60" placeholder="Account name" required>
+      <div class="field-row">
+        <div>
+          <label for="f-amount">Planned contribution ($)</label>
+          <input id="f-amount" type="number" min="0.01" step="0.01" required>
+        </div>
+        <div>
+          <label for="f-freq">How often</label>
+          <select id="f-freq">
+            <option value="daily">Every day</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="every">Every N days</option>
+          </select>
+        </div>
+      </div>
+      <div id="f-weekday-wrap" style="display:none">
+        <label for="f-weekday">Which day</label>
+        <select id="f-weekday">
+          <option value="0">Sunday</option>
+          <option value="1" selected>Monday</option>
+          <option value="2">Tuesday</option>
+          <option value="3">Wednesday</option>
+          <option value="4">Thursday</option>
+          <option value="5">Friday</option>
+          <option value="6">Saturday</option>
+        </select>
+      </div>
+      <div id="f-dom-wrap" style="display:none">
+        <label for="f-dom">Day of the month</label>
+        <select id="f-dom"></select>
+      </div>
+      <div id="f-everyn-wrap" style="display:none">
+        <label for="f-everyn">Every how many days</label>
+        <input id="f-everyn" type="number" min="2" max="365" value="7">
+      </div>
+      <label>Color</label>
+      <div class="swatches" id="f-colors"></div>
+      <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+        <button type="submit" class="btn-gold" id="form-submit">Add account</button>
+        <button type="button" class="btn-ghost" id="form-cancel" style="display:none">Cancel edit</button>
+      </div>
+    </form>
+  </section>
+
+  <footer>Your data lives only in this browser, on this device. Open the app each day to check in.</footer>
+</div>
+
+<script>
+var KEY = 'invest-habit-v1';
+var COLORS = ['#3DDC97', '#F5C451', '#38BDF8', '#A78BFA', '#FB7185', '#2DD4BF'];
+var DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+var heatFilter = 'all';
+var editingId = null;
+
+function $(id) { return document.getElementById(id); }
+function esc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function fmt(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function parse(s) {
+  var p = s.split('-').map(Number);
+  return new Date(p[0], p[1] - 1, p[2]);
+}
+function addDays(d, n) {
+  var x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}
+function todayStr() { return fmt(new Date()); }
+function pretty(s) {
+  return parse(s).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+function money(n) {
+  return Number(n).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+}
+function uid() {
+  return 'a' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36);
+}
+
+function load() {
+  try {
+    var raw = localStorage.getItem(KEY);
+    if (raw) {
+      var p = JSON.parse(raw);
+      if (p && Array.isArray(p.accounts) && Array.isArray(p.entries)) return p;
+    }
+  } catch (e) {}
+  return { accounts: [], entries: [] };
+}
+var state = load();
+
+/* ---------- demo overlay: view-only, never overwrites real data ---------- */
+var demoOn = false;
+var demoState = null;
+function S() { return demoOn ? demoState : state; }
+function buildDemo() {
+  var t = new Date();
+  function dstr(off) { return fmt(addDays(t, -off)); }
+  var accts = [
+    { id: 'demo-brokerage', name: 'Brokerage', color: '#3DDC97', amount: 25, freq: 'daily', weekday: 1, dom: 1, everyN: 7, created: dstr(90) },
+    { id: 'demo-savings', name: 'Savings', color: '#F5C451', amount: 50, freq: 'weekly', weekday: 1, dom: 1, everyN: 7, created: dstr(90) },
+    { id: 'demo-crypto', name: 'Crypto', color: '#38BDF8', amount: 10, freq: 'every', weekday: 1, dom: 1, everyN: 3, created: dstr(90) }
+  ];
+  var entries = [];
+  var n = 0;
+  function push(acId, off, amt) { entries.push({ id: 'demo-e' + (n++), accountId: acId, date: dstr(off), amount: amt, note: '' }); }
+  for (var i = 90; i >= 0; i--) {
+    if (i % 9 !== 4) push('demo-brokerage', i, 25);
+  }
+  for (var j = 90; j >= 0; j--) {
+    if (addDays(t, -j).getDay() === 1) push('demo-savings', j, 50);
+  }
+  for (var k = 0; k <= 30; k++) {
+    var off = k * 3;
+    if (off > 90) break;
+    if (k % 7 !== 3) push('demo-crypto', off, 10);
+  }
+  return { accounts: accts, entries: entries };
+}
+function setDemoUI() {
+  var b = $('demo-banner');
+  if (b) b.style.display = demoOn ? 'block' : 'none';
+  var btns = document.querySelectorAll('[data-demo-toggle]');
+  for (var i = 0; i < btns.length; i++) btns[i].textContent = demoOn ? 'Clear demo' : 'View demo';
+  var form = $('account-form');
+  if (form && form.querySelectorAll) {
+    var els = form.querySelectorAll('input, select, button');
+    for (var j = 0; j < els.length; j++) els[j].disabled = demoOn;
+  }
+}
+function toggleDemo() {
+  demoOn = !demoOn;
+  if (demoOn && !demoState) demoState = buildDemo();
+  heatFilter = 'all';
+  setDemoUI();
+  vt(renderAll);
+}
+
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+function isDueOn(ac, d) {
+  if (ac.freq === 'daily') return true;
+  if (ac.freq === 'weekly') return d.getDay() === ac.weekday;
+  if (ac.freq === 'monthly') return d.getDate() === ac.dom;
+  if (ac.freq === 'every') {
+    var diff = Math.round((d - parse(ac.created)) / 86400000);
+    return diff >= 0 && diff % ac.everyN === 0;
+  }
+  return false;
+}
+function dueDates(ac, end) {
+  var out = [];
+  var start = parse(ac.created);
+  var e = parse(end);
+  var floor = addDays(e, -730);
+  var d = start < floor ? floor : start;
+  for (; d <= e; d = addDays(d, 1)) {
+    if (isDueOn(ac, d)) out.push(fmt(d));
+  }
+  return out;
+}
+function nextDue(ac, from) {
+  var d = addDays(parse(from), 1);
+  for (var i = 0; i < 400; i++) {
+    if (isDueOn(ac, d)) return fmt(d);
+    d = addDays(d, 1);
+  }
+  return null;
+}
+function freqLabel(ac) {
+  if (ac.freq === 'daily') return 'daily';
+  if (ac.freq === 'weekly') return 'every ' + DAYS[ac.weekday];
+  if (ac.freq === 'monthly') return 'on day ' + ac.dom + ' each month';
+  return 'every ' + ac.everyN + ' days';
+}
+function entrySet(acId) {
+  var s = {};
+  S().entries.forEach(function (en) { if (en.accountId === acId) s[en.date] = true; });
+  return s;
+}
+function accountStreaks(ac) {
+  var t = todayStr();
+  var dues = dueDates(ac, t);
+  var done = entrySet(ac.id);
+  var cur = 0;
+  for (var i = dues.length - 1; i >= 0; i--) {
+    var ds = dues[i];
+    if (ds === t && !done[ds]) continue; // today still pending: not yet, never a break
+    if (done[ds]) cur++;
+    else break;
+  }
+  var longest = 0, run = 0;
+  dues.forEach(function (ds) {
+    if (done[ds]) { run++; longest = Math.max(longest, run); }
+    else run = 0;
+  });
+  return { current: cur, longest: longest };
+}
+function overallStreak() {
+  var days = {};
+  S().entries.forEach(function (e) { days[e.date] = true; });
+  var t = todayStr();
+  var cur = 0;
+  var d = days[t] ? parse(t) : addDays(parse(t), -1);
+  while (days[fmt(d)]) { cur++; d = addDays(d, -1); }
+  var sorted = Object.keys(days).sort();
+  var longest = 0, run = 0, prev = null;
+  sorted.forEach(function (s) {
+    var dt = parse(s);
+    if (prev && Math.round((dt - prev) / 86400000) === 1) run++;
+    else run = 1;
+    longest = Math.max(longest, run);
+    prev = dt;
+  });
+  return { current: cur, longest: longest };
+}
+function monthProgress(ac) {
+  var now = new Date();
+  var first = new Date(now.getFullYear(), now.getMonth(), 1);
+  var t = todayStr();
+  var dues = dueDates(ac, t).filter(function (ds) { return parse(ds) >= first; });
+  var done = entrySet(ac.id);
+  var did = dues.filter(function (ds) { return done[ds]; }).length;
+  return { due: dues.length, did: did, pct: dues.length ? Math.round(did / dues.length * 100) : null };
+}
+function sumEntries(list) {
+  return list.reduce(function (a, e) { return a + Number(e.amount || 0); }, 0);
+}
+
+function renderHero() {
+  var ov = overallStreak();
+  var t = todayStr();
+  var dueToday = S().accounts.filter(function (ac) { return isDueOn(ac, parse(t)); });
+  var doneToday = S().entries.filter(function (e) { return e.date === t; }).length;
+  var dueLine = S().accounts.length === 0
+    ? 'Nothing due yet'
+    : (doneToday + ' of ' + dueToday.length + ' due done today');
+  var dayWord = 'day streak';
+  $('hero').innerHTML =
+    '<p class="eyebrow">Your streak</p>' +
+    '<div class="streak">' + ov.current + '</div>' +
+    '<div class="streak-label">' + dayWord + '</div>' +
+    '<p>' + (ov.current > 0
+      ? 'Keep it going — check in each day an account comes due.'
+      : 'Add your first account below, then check in each day it comes due. Your streak grows with every check-in.') + '</p>' +
+    '<div class="stats">' +
+    '<div class="stat"><b>' + money(sumEntries(S().entries)) + '</b><span>Total contributed</span></div>' +
+    '<div class="stat"><b>' + S().entries.length + '</b><span>Check-ins logged</span></div>' +
+    '<div class="stat"><b>' + esc(dueLine) + '</b><span>Due today</span></div>' +
+    '</div>';
+  var stEl = document.querySelector('.hero .streak');
+  if (stEl && motionOK() && !vtActive && typeof requestAnimationFrame === 'function') {
+    var from = heroFirst ? 0 : prevStreak;
+    heroFirst = false;
+    if (from != null && from !== ov.current) {
+      (function () {
+        var t0 = performance.now(), dur = 600;
+        function tick(now) {
+          var p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+          stEl.textContent = Math.round(from + (ov.current - from) * e);
+          if (p < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      })();
+    }
+  } else { heroFirst = false; }
+  prevStreak = ov.current;
+}
+
+function renderToday() {
+  var t = todayStr();
+  var box = $('today-list');
+  if (S().accounts.length === 0) {
+    box.innerHTML = '<div class="empty"><b>Nothing due yet</b>Add an account below and its due days will show up here.</div>';
+    return;
+  }
+  var due = S().accounts.filter(function (ac) { return isDueOn(ac, parse(t)); });
+  var doneMap = {};
+  S().entries.forEach(function (e) { if (e.date === t) doneMap[e.accountId] = e; });
+  var resting = S().accounts.length - due.length;
+  var html = '';
+  if (due.length === 0) {
+    html = '<div class="empty"><b>Nothing due today</b>' + resting + ' account' + (resting === 1 ? '' : 's') + ' resting today — due days will appear here when they come up.</div>';
+  } else {
+    due.forEach(function (ac) {
+      var done = doneMap[ac.id];
+      if (done) {
+        html += '<div class="row"><span class="dot" style="background:' + esc(ac.color) + '"></span>' +
+          '<div class="grow"><b>' + esc(ac.name) + '</b><span>' + money(done.amount) + (done.note ? ' · ' + esc(done.note) : '') + '</span></div>' +
+          '<span class="done-mark">' + (demoOn ? '✓ Demo' : '✓ Done') + '</span>' +
+          (demoOn ? '' : '<button class="btn-ghost btn-small" data-undo="' + ac.id + '">Undo</button>') + '</div>';
+      } else {
+        html += '<div class="row"><span class="dot" style="background:' + esc(ac.color) + '"></span>' +
+          '<div class="grow"><b>' + esc(ac.name) + '</b><span>Planned ' + money(ac.amount) + '</span></div>' +
+          (demoOn ? '<span class="muted" style="font-size:13px">Demo — check-ins disabled</span></div>'
+          : '<input class="due-amount" type="number" min="0.01" step="0.01" value="' + ac.amount + '" data-amt="' + ac.id + '" aria-label="Amount for ' + esc(ac.name) + '">' +
+          '<input class="due-note" type="text" maxlength="80" placeholder="Note (optional)" data-note="' + ac.id + '">' +
+          '<button class="btn-mint" data-done="' + ac.id + '">Done</button></div>');
+      }
+    });
+    if (resting > 0) html += '<p class="muted" style="font-size:13px;margin:10px 0 0">' + resting + ' account' + (resting === 1 ? '' : 's') + ' resting today.</p>';
+  }
+  box.innerHTML = html;
+}
+
+function ringSVG(pct) {
+  var C = 2 * Math.PI * 26;
+  var off = pct == null ? C : C * (1 - pct / 100);
+  var label = pct == null ? '—' : pct + '%';
+  return '<div class="ring"><svg width="64" height="64" viewBox="0 0 64 64">' +
+    '<circle cx="32" cy="32" r="26" fill="none" stroke="#22314a" stroke-width="7"/>' +
+    '<circle cx="32" cy="32" r="26" fill="none" stroke="#3DDC97" stroke-width="7" stroke-linecap="round" ' +
+    'stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + off.toFixed(1) + '" transform="rotate(-90 32 32)"/>' +
+    '</svg><span>' + label + '</span></div>';
+}
+
+function renderAccounts() {
+  var box = $('accounts-list');
+  if (S().accounts.length === 0) {
+    box.innerHTML = '<div class="empty"><b>No accounts yet</b>Your accounts and their streaks will live here.</div>';
+    return;
+  }
+  var t = todayStr();
+  var html = '';
+  S().accounts.forEach(function (ac) {
+    var st = accountStreaks(ac);
+    var mp = monthProgress(ac);
+    var total = sumEntries(S().entries.filter(function (e) { return e.accountId === ac.id; }));
+    var dueToday = isDueOn(ac, parse(t));
+    var next = dueToday ? 'Due today' : 'Next due ' + pretty(nextDue(ac, t));
+    var monthLine = mp.pct == null
+      ? 'Nothing due yet this month'
+      : mp.did + ' of ' + mp.due + ' due days done this month';
+    html += '<div class="row"><div class="acct" style="flex:1">' + ringSVG(mp.pct) +
+      '<div class="grow"><b>' + esc(ac.name) + '</b>' +
+      '<span>' + money(ac.amount) + ' · ' + esc(freqLabel(ac)) + ' · ' + next + '</span>' +
+      '<span>Streak ' + st.current + ' · longest ' + st.longest + ' · ' + monthLine + ' · total ' + money(total) + '</span></div>' +
+      '<span class="dot" style="background:' + esc(ac.color) + ';margin-top:6px"></span></div></div>' +
+      (demoOn ? '' : '<div style="display:flex;gap:8px;padding:0 0 12px 78px">' +
+      '<button class="btn-ghost btn-small" data-edit="' + ac.id + '">Edit</button>' +
+      '<button class="btn-danger btn-small" data-del-acct="' + ac.id + '">Delete</button></div>');
+  });
+  box.innerHTML = html;
+}
+
+function renderHeatmap() {
+  var box = $('heatmap');
+  if (S().entries.length === 0) {
+    box.innerHTML = '<div class="empty"><b>Your grid is waiting</b>Each day you check in will light up a square here.</div>';
+    return;
+  }
+  var counts = {};
+  S().entries.forEach(function (e) {
+    if (heatFilter === 'all' || heatFilter === e.accountId) {
+      counts[e.date] = (counts[e.date] || 0) + 1;
+    }
+  });
+  var today = new Date();
+  var start = addDays(today, -(26 * 7 - 1));
+  start = addDays(start, -start.getDay());
+  function shade(n) {
+    if (!n) return '#22314a';
+    if (n === 1) return '#1d7a5f';
+    if (n === 2) return '#25a07a';
+    return '#3ddc97';
+  }
+  var cells = '';
+  for (var i = 0; i < 26 * 7; i++) {
+    var d = addDays(start, i);
+    if (d > today) { cells += '<span class="cell" style="opacity:.35"></span>'; continue; }
+    var ds = fmt(d);
+    var n = counts[ds] || 0;
+    cells += '<span class="cell" style="background:' + shade(n) + '" title="' + esc(pretty(ds)) + ' · ' + n + ' check-in' + (n === 1 ? '' : 's') + '"></span>';
+  }
+  box.innerHTML = '<div class="heat">' + cells + '</div>';
+}
+
+function renderFilters() {
+  var f = $('heat-filters');
+  var html = '<button class="' + (heatFilter === 'all' ? 'on' : 'btn-ghost') + '" data-heat="all">All accounts</button>';
+  S().accounts.forEach(function (ac) {
+    html += '<button class="' + (heatFilter === ac.id ? 'on' : 'btn-ghost') + '" data-heat="' + ac.id + '">' + esc(ac.name) + '</button>';
+  });
+  f.innerHTML = html;
+}
+
+function renderBadges() {
+  var longest = overallStreak().longest;
+  var html = '';
+  [7, 30, 100, 365].forEach(function (t) {
+    var on = longest >= t;
+    html += '<div class="badge ' + (on ? 'unlocked' : 'locked') + '"><b>' + t + '</b><span>day streak' + (on ? ' ✓' : '') + '</span></div>';
+  });
+  $('badges').innerHTML = html;
+}
+
+function renderHistory() {
+  var box = $('history-list');
+  if (S().entries.length === 0) {
+    box.innerHTML = '<div class="empty"><b>No check-ins yet</b>Tap a due item above to log your first one.</div>';
+    return;
+  }
+  var byId = {};
+  S().accounts.forEach(function (ac) { byId[ac.id] = ac; });
+  var sorted = S().entries.slice().sort(function (a, b) {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+    return 0;
+  }).slice(0, 100);
+  var html = '';
+  sorted.forEach(function (en) {
+    var ac = byId[en.accountId];
+    var name = ac ? ac.name : 'Account';
+    var color = ac ? ac.color : '#9fb0c8';
+    html += '<div class="row"><span class="dot" style="background:' + esc(color) + '"></span>' +
+      '<div class="grow"><b>' + esc(name) + '</b><span>' + esc(pretty(en.date)) + ' · ' + money(en.amount) + (en.note ? ' · ' + esc(en.note) : '') + '</span></div>' +
+      (demoOn ? '' : '<button class="btn-ghost btn-small" data-del-entry="' + en.id + '">Delete</button>') + '</div>';
+  });
+  box.innerHTML = html;
+}
+
+
+/* ---------- visuals: hand-rolled SVG, zero libraries ---------- */
+function vizById() {
+  var m = {};
+  S().accounts.forEach(function (ac) { m[ac.id] = ac; });
+  return m;
+}
+function vizEntriesSorted() {
+  return S().entries.slice().sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+}
+function monthKey(ds) { return ds.slice(0, 7); }
+function monthLabel(mk) {
+  var p = mk.split('-');
+  var names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return names[parseInt(p[1], 10) - 1] + (p[1] === '01' ? " '" + p[0].slice(2) : '');
+}
+function monthList(firstMk, lastMk) {
+  var out = [];
+  var y = parseInt(firstMk.slice(0, 4), 10), m = parseInt(firstMk.slice(5, 7), 10);
+  var ey = parseInt(lastMk.slice(0, 4), 10), em = parseInt(lastMk.slice(5, 7), 10);
+  while (y < ey || (y === ey && m <= em)) {
+    out.push(y + '-' + String(m).padStart(2, '0'));
+    m++; if (m > 12) { m = 1; y++; }
+  }
+  return out;
+}
+function monthBounds(mk) {
+  var y = parseInt(mk.slice(0, 4), 10), m = parseInt(mk.slice(5, 7), 10);
+  return { start: new Date(y, m - 1, 1), end: new Date(y, m, 0) };
+}
+function tapestrySVG() {
+  var ents = S().entries;
+  if (!ents.length) return null;
+  var byDay = {};
+  var byId = vizById();
+  ents.forEach(function (e) {
+    if (!byDay[e.date]) byDay[e.date] = [];
+    if (byDay[e.date].indexOf(e.accountId) < 0) byDay[e.date].push(e.accountId);
+  });
+  var dates = Object.keys(byDay).sort();
+  var first = parse(dates[0]);
+  var today = parse(todayStr());
+  var start = addDays(first, -first.getDay());
+  var totalDays = Math.round((today - start) / 86400000) + 1;
+  var weeks = Math.ceil(totalDays / 7);
+  var capped = false;
+  if (weeks > 52) {
+    capped = true;
+    start = addDays(today, -(52 * 7 - 1));
+    start = addDays(start, -start.getDay());
+    totalDays = Math.round((today - start) / 86400000) + 1;
+    weeks = Math.ceil(totalDays / 7);
+  }
+  var cw = 38, gap = 4, cell = cw + gap;
+  var W = 7 * cell - gap, H = weeks * cell - gap;
+  var s = '<svg viewBox="0 0 ' + (W + 16) + ' ' + (H + 64) + '" role="img" aria-label="Tapestry of check-in history">';
+  s += '<rect x="0" y="6" width="' + (W + 16) + '" height="8" rx="4" fill="#1A1B1E" stroke="rgba(255,255,255,.16)"/>';
+  s += '<g transform="translate(8,22)">';
+  var idx = 0;
+  for (var w = 0; w < weeks; w++) {
+    for (var c = 0; c < 7; c++) {
+      var d = addDays(start, w * 7 + c);
+      var ds = fmt(d);
+      var x = c * cell, y = w * cell;
+      var anim = ' class="stitch" style="animation-delay:' + Math.min(idx * 8, 1500) + 'ms"';
+      if (d > today) {
+        s += '<rect x="' + x + '" y="' + y + '" width="' + cw + '" height="' + cw + '" rx="3" fill="none" stroke="rgba(255,255,255,.10)"' + anim + '/>';
+      } else {
+        var ids = byDay[ds] || [];
+        if (!ids.length) {
+          s += '<rect x="' + x + '" y="' + y + '" width="' + cw + '" height="' + cw + '" rx="3" fill="rgba(255,255,255,.06)"' + anim + '/>';
+        } else if (ids.length === 1) {
+          var col = (byId[ids[0]] || {}).color || '#9fb0c8';
+          s += '<rect x="' + x + '" y="' + y + '" width="' + cw + '" height="' + cw + '" rx="3" fill="' + esc(col) + '"' + anim + '/>';
+        } else {
+          var sw = cw / ids.length;
+          for (var k = 0; k < ids.length; k++) {
+            var cc = (byId[ids[k]] || {}).color || '#9fb0c8';
+            s += '<rect x="' + (x + k * sw).toFixed(1) + '" y="' + y + '" width="' + (sw - 1).toFixed(1) + '" height="' + cw + '" rx="2" fill="' + esc(cc) + '"' + anim + '/>';
+          }
+        }
+      }
+      idx++;
+    }
+  }
+  s += '</g>';
+  var fy = 22 + H + 8;
+  for (var f = 0; f < 28; f++) {
+    var fx = 8 + f * (W / 27);
+    s += '<line x1="' + fx.toFixed(1) + '" y1="' + fy + '" x2="' + fx.toFixed(1) + '" y2="' + (fy + 18) + '" stroke="#71717A" stroke-width="1.5"/>';
+  }
+  s += '</svg>';
+  return { svg: s, note: capped ? 'the last year of stitches' : 'all ' + weeks + ' week' + (weeks === 1 ? '' : 's') };
+}
+function monthlyBarsSVG() {
+  var ents = S().entries;
+  if (!ents.length) return null;
+  var months = {};
+  ents.forEach(function (e) {
+    var mk = monthKey(e.date);
+    if (!months[mk]) months[mk] = { total: 0, byAcct: {} };
+    months[mk].total += Number(e.amount || 0);
+    months[mk].byAcct[e.accountId] = (months[mk].byAcct[e.accountId] || 0) + Number(e.amount || 0);
+  });
+  var keys = Object.keys(months).sort();
+  var full = monthList(keys[0], keys[keys.length - 1]);
+  var max = 1;
+  full.forEach(function (mk) { if (months[mk] && months[mk].total > max) max = months[mk].total; });
+  var W = 640, H = 230, padT = 20, padB = 26, base = H - padB;
+  var n = full.length;
+  var step = (W - 16) / n;
+  var bw = Math.max(6, Math.min(34, step * 0.62));
+  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Contributions per month">';
+  s += '<line x1="8" y1="' + base + '" x2="' + (W - 8) + '" y2="' + base + '" stroke="rgba(255,255,255,.16)" stroke-width="1"/>';
+  full.forEach(function (mk, i) {
+    var cx = 8 + step * i + step / 2;
+    var x = cx - bw / 2;
+    var m = months[mk];
+    var labelEvery = n > 18 ? 3 : n > 12 ? 2 : 1;
+    if (m) {
+      var y = base;
+      var segs = '';
+      S().accounts.forEach(function (ac) {
+        var v = m.byAcct[ac.id] || 0;
+        if (!v) return;
+        var hh = v / max * (base - padT);
+        y -= hh;
+        segs += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + hh.toFixed(1) + '" fill="' + esc(ac.color) + '"/>';
+      });
+      s += '<g class="bar-grow" style="transform-origin:' + cx.toFixed(1) + 'px ' + base + 'px;animation-delay:' + Math.min(i * 60, 900) + 'ms">' + segs + '</g>';
+      if (n <= 24) s += '<text x="' + cx.toFixed(1) + '" y="' + (base - m.total / max * (base - padT) - 5).toFixed(1) + '" text-anchor="middle" font-size="10" fill="#A1A1AA">' + money(m.total).replace('.00', '') + '</text>';
+    }
+    if (i % labelEvery === 0 || i === n - 1) {
+      s += '<text x="' + cx.toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10" fill="#71717A">' + monthLabel(mk) + '</text>';
+    }
+  });
+  s += '</svg>';
+  return s;
+}
+function cumulativeSVG() {
+  var ents = vizEntriesSorted();
+  if (!ents.length) return null;
+  var byDay = {};
+  ents.forEach(function (e) { byDay[e.date] = (byDay[e.date] || 0) + Number(e.amount || 0); });
+  var first = parse(ents[0].date);
+  var today = parse(todayStr());
+  var days = Math.round((today - first) / 86400000);
+  var cumArr = [];
+  var cum = 0;
+  var cumByDate = {};
+  for (var i = 0; i <= days; i++) {
+    var ds = fmt(addDays(first, i));
+    cum += byDay[ds] || 0;
+    cumArr.push(cum);
+    cumByDate[ds] = cum;
+  }
+  var max = Math.max(cum, 1);
+  var W = 640, H = 230, padT = 22, padB = 26, base = H - padB;
+  var pts = cumArr.map(function (c, j) {
+    return [8 + j / Math.max(days, 1) * (W - 16), base - c / max * (base - padT)];
+  });
+  var uniq = Object.keys(byDay).sort();
+  var marks = [];
+  var run = 0, prev = null, found = {};
+  uniq.forEach(function (ds) {
+    var dt = parse(ds);
+    if (prev && Math.round((dt - prev) / 86400000) === 1) run++; else run = 1;
+    [7, 30, 100, 365].forEach(function (t) {
+      if (run >= t && !found[t]) { found[t] = true; marks.push({ t: t, date: ds }); }
+    });
+    prev = dt;
+  });
+  var line = pts.map(function (p, j) { return (j ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
+  var area = line + ' L' + pts[pts.length - 1][0].toFixed(1) + ' ' + base + ' L' + pts[0][0].toFixed(1) + ' ' + base + ' Z';
+  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Cumulative contributions over time">';
+  s += '<g class="viz-fade">';
+  s += '<path d="' + area + '" fill="#35C98E" fill-opacity="0.12"/>';
+  s += '<path d="' + line + '" fill="none" stroke="#35C98E" stroke-width="2" stroke-linecap="round"/>';
+  s += '<line x1="8" y1="' + base + '" x2="' + (W - 8) + '" y2="' + base + '" stroke="rgba(255,255,255,.16)" stroke-width="1"/>';
+  s += '<text x="8" y="' + (padT - 6) + '" font-size="11" fill="#F5F5F4">' + money(max) + ' total</text>';
+  s += '<text x="8" y="' + (H - 8) + '" font-size="10" fill="#71717A">' + pretty(fmt(first)) + '</text>';
+  s += '<text x="' + (W - 8) + '" y="' + (H - 8) + '" text-anchor="end" font-size="10" fill="#71717A">' + pretty(todayStr()) + '</text>';
+  marks.forEach(function (mk) {
+    var idx = Math.round((parse(mk.date) - first) / 86400000);
+    var p = pts[Math.max(0, Math.min(pts.length - 1, idx))];
+    s += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="4" fill="#0A0A0B" stroke="#35C98E" stroke-width="2"/>';
+    s += '<text x="' + p[0].toFixed(1) + '" y="' + Math.max(12, p[1] - 10).toFixed(1) + '" text-anchor="middle" font-size="10" fill="#35C98E">' + mk.t + 'd</text>';
+  });
+  s += '</g></svg>';
+  return s;
+}
+function consistencySVG() {
+  var accts = S().accounts;
+  if (!accts.length) return null;
+  var byId = vizById();
+  var firstMk = monthKey(accts.map(function (a) { return a.created; }).sort()[0]);
+  var months = monthList(firstMk, monthKey(todayStr()));
+  var rows = [];
+  months.forEach(function (mk) {
+    var b = monthBounds(mk);
+    var mStart = b.start, mEnd = b.end;
+    var today = parse(todayStr());
+    if (mEnd > today) mEnd = today;
+    if (mStart > today) return;
+    var due = 0;
+    accts.forEach(function (ac) {
+      dueDates(ac, fmt(mEnd)).forEach(function (ds) {
+        var d = parse(ds);
+        if (d >= mStart && d <= mEnd) due++;
+      });
+    });
+    if (!due) return;
+    var done = 0;
+    S().entries.forEach(function (e) {
+      var d = parse(e.date);
+      if (d < mStart || d > mEnd) return;
+      var ac = byId[e.accountId];
+      if (ac && isDueOn(ac, d)) done++;
+    });
+    rows.push({ mk: mk, pct: Math.round(done / due * 100) });
+  });
+  if (!rows.length) return null;
+  var W = 640, H = 210, padT = 20, padB = 26, base = H - padB;
+  var n = rows.length;
+  var step = (W - 16) / n;
+  var bw = Math.max(6, Math.min(34, step * 0.62));
+  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Due days completed per month">';
+  s += '<line x1="8" y1="' + base + '" x2="' + (W - 8) + '" y2="' + base + '" stroke="rgba(255,255,255,.16)" stroke-width="1"/>';
+  rows.forEach(function (r, i) {
+    var cx = 8 + step * i + step / 2;
+    var x = cx - bw / 2;
+    var hh = r.pct / 100 * (base - padT);
+    s += '<g class="bar-grow" style="transform-origin:' + cx.toFixed(1) + 'px ' + base + 'px;animation-delay:' + Math.min(i * 60, 900) + 'ms"><rect x="' + x.toFixed(1) + '" y="' + (base - hh).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + hh.toFixed(1) + '" fill="#35C98E"/></g>';
+    s += '<text x="' + cx.toFixed(1) + '" y="' + (base - hh - 5).toFixed(1) + '" text-anchor="middle" font-size="10" fill="#A1A1AA">' + r.pct + '%</text>';
+    var labelEvery = n > 18 ? 3 : n > 12 ? 2 : 1;
+    if (i % labelEvery === 0 || i === n - 1) {
+      s += '<text x="' + cx.toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10" fill="#71717A">' + monthLabel(r.mk) + '</text>';
+    }
+  });
+  s += '</svg>';
+  return s;
+}
+function weekdaySVG() {
+  var ents = S().entries;
+  if (!ents.length) return null;
+  var counts = [0, 0, 0, 0, 0, 0, 0];
+  ents.forEach(function (e) { counts[parse(e.date).getDay()]++; });
+  var order = [1, 2, 3, 4, 5, 6, 0];
+  var names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  var max = 1;
+  counts.forEach(function (c) { if (c > max) max = c; });
+  var W = 640, H = 210, padT = 20, padB = 26, base = H - padB;
+  var step = (W - 16) / 7;
+  var bw = Math.min(44, step * 0.55);
+  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Check-ins by weekday">';
+  s += '<line x1="8" y1="' + base + '" x2="' + (W - 8) + '" y2="' + base + '" stroke="rgba(255,255,255,.16)" stroke-width="1"/>';
+  order.forEach(function (dow, i) {
+    var cx = 8 + step * i + step / 2;
+    var x = cx - bw / 2;
+    var hh = counts[dow] / max * (base - padT);
+    s += '<g class="bar-grow" style="transform-origin:' + cx.toFixed(1) + 'px ' + base + 'px;animation-delay:' + (i * 60) + 'ms"><rect x="' + x.toFixed(1) + '" y="' + (base - hh).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + hh.toFixed(1) + '" fill="#35C98E"/></g>';
+    s += '<text x="' + cx.toFixed(1) + '" y="' + (base - hh - 5).toFixed(1) + '" text-anchor="middle" font-size="10" fill="#A1A1AA">' + counts[dow] + '</text>';
+    s += '<text x="' + cx.toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10" fill="#71717A">' + names[i] + '</text>';
+  });
+  s += '</svg>';
+  return s;
+}
+function breakdownSVG() {
+  var accts = S().accounts;
+  if (!accts.length) return null;
+  var totals = accts.map(function (ac) {
+    return { ac: ac, total: sumEntries(S().entries.filter(function (e) { return e.accountId === ac.id; })) };
+  }).filter(function (r) { return r.total > 0; }).sort(function (a, b) { return b.total - a.total; });
+  if (!totals.length) return null;
+  var sum = totals.reduce(function (a, r) { return a + r.total; }, 0);
+  var max = totals[0].total;
+  var W = 640, rowH = 34, H = totals.length * rowH + 8;
+  var s = '<svg class="viz-fade" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Totals by account">';
+  totals.forEach(function (r, i) {
+    var y = 8 + i * rowH;
+    var bw = r.total / max * 360;
+    var nm = r.ac.name.length > 16 ? r.ac.name.slice(0, 15) + '…' : r.ac.name;
+    s += '<text x="0" y="' + (y + 15) + '" font-size="12" fill="#F5F5F4">' + esc(nm) + '</text>';
+    s += '<rect x="150" y="' + (y + 2) + '" width="' + Math.max(bw, 3).toFixed(1) + '" height="14" rx="2" fill="' + esc(r.ac.color) + '"/>';
+    s += '<text x="' + (150 + Math.max(bw, 3) + 10).toFixed(1) + '" y="' + (y + 15) + '" font-size="12" fill="#A1A1AA">' + money(r.total) + ' · ' + Math.round(r.total / sum * 100) + '%</text>';
+  });
+  s += '</svg>';
+  return s;
+}
+function vizBlock(eyebrow, title, svg, caption) {
+  return '<div class="viz"><p class="eyebrow">' + eyebrow + '</p><h3>' + title + '</h3>' +
+    (svg || '<div class="empty"><b>Not enough data yet</b>This visual grows as you check in.</div>') +
+    (caption ? '<p class="viz-cap">' + caption + '</p>' : '') + '</div>';
+}
+function renderVisuals() {
+  var box = $('visuals-body');
+  if (!box) return;
+  var demoNote = demoOn ? '<p class="demo-note">DEMO DATA — example accounts and check-ins. Your real data is untouched.</p>' : '';
+  if (!S().entries.length) {
+    box.innerHTML = demoNote +
+      '<div class="empty"><b>Your tapestry starts with your first check-in</b>Check in on a due day and your graphs, charts, and tapestry will grow here.</div>' +
+      (S().accounts.length ? '' : '<p class="muted" style="font-size:13px">Add an account below to begin, or preview the visuals with demo data.</p>');
+    return;
+  }
+  var tap = tapestrySVG();
+  var html = demoNote;
+  html += vizBlock('01 · Tapestry', 'Your tapestry',
+    tap ? '<div class="tapestry-wrap">' + tap.svg + '</div>' : null,
+    tap ? 'Each stitch is a day. Color is the account checked in; split stitches are days with more than one check-in; dark stitches are days with nothing checked in. Showing ' + tap.note + '.' : null);
+  html += vizBlock('02 · Monthly', 'Contributions per month', monthlyBarsSVG(), 'Stacked by account. Each bar is one month of check-ins.');
+  html += vizBlock('03 · Growth', 'Total contributed over time', cumulativeSVG(), 'Every check-in adds to the curve. Dots mark the days your streak first reached 7, 30, 100, and 365 days.');
+  html += vizBlock('04 · Consistency', 'Due days completed', consistencySVG(), 'Share of due days you actually checked in, per month.');
+  html += vizBlock('05 · Rhythm', 'Check-ins by weekday', weekdaySVG(), 'Which weekdays you actually show up on.');
+  html += vizBlock('06 · Breakdown', 'Totals by account', breakdownSVG(), 'Where your contributions have gone so far.');
+  box.innerHTML = html;
+}
+
+function renderAll() {
+  renderHero();
+  renderToday();
+  renderAccounts();
+  renderFilters();
+  renderHeatmap();
+  renderBadges();
+  renderHistory();
+  renderVisuals();
+}
+
+function fillColorSwatches(selected) {
+  var html = '';
+  COLORS.forEach(function (c, i) {
+    html += '<input type="radio" name="f-color" id="col' + i + '" value="' + c + '"' + (c === selected ? ' checked' : '') + '>' +
+      '<label for="col' + i + '"><span style="background:' + c + '"></span></label>';
+  });
+  $('f-colors').innerHTML = html;
+}
+function syncFreqFields() {
+  var f = $('f-freq').value;
+  $('f-weekday-wrap').style.display = f === 'weekly' ? 'block' : 'none';
+  $('f-dom-wrap').style.display = f === 'monthly' ? 'block' : 'none';
+  $('f-everyn-wrap').style.display = f === 'every' ? 'block' : 'none';
+}
+function resetForm() {
+  editingId = null;
+  $('form-title').textContent = 'Add an account';
+  $('form-submit').textContent = 'Add account';
+  $('form-cancel').style.display = 'none';
+  $('account-form').reset();
+  $('f-weekday').value = String(new Date().getDay());
+  $('f-dom').value = String(Math.min(new Date().getDate(), 28));
+  $('f-everyn').value = '7';
+  fillColorSwatches(COLORS[0]);
+  syncFreqFields();
+}
+
+$('f-freq').addEventListener('change', syncFreqFields);
+$('form-cancel').addEventListener('click', resetForm);
+$('account-form').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  if (demoOn) return;
+  var name = $('f-name').value.trim();
+  var amount = parseFloat($('f-amount').value);
+  if (!name) { alert('Give the account a name first.'); return; }
+  if (!isFinite(amount) || amount <= 0) { alert('Enter a planned contribution above zero.'); return; }
+  var freq = $('f-freq').value;
+  var picked = document.querySelector('input[name="f-color"]:checked');
+  var ac = {
+    id: editingId || uid(),
+    name: name,
+    color: picked ? picked.value : COLORS[0],
+    amount: Math.round(amount * 100) / 100,
+    freq: freq,
+    weekday: parseInt($('f-weekday').value, 10),
+    dom: parseInt($('f-dom').value, 10) || 1,
+    everyN: Math.max(2, Math.min(365, parseInt($('f-everyn').value, 10) || 7)),
+    created: editingId
+      ? (S().accounts.find(function (a) { return a.id === editingId; }) || {}).created || todayStr()
+      : todayStr()
+  };
+  if (editingId) {
+    var idx = S().accounts.findIndex(function (a) { return a.id === editingId; });
+    if (idx >= 0) S().accounts[idx] = ac;
+  } else {
+    S().accounts.push(ac);
+  }
+  save();
+  resetForm();
+  vt(renderAll);
+});
+
+document.addEventListener('click', function (ev) {
+  var t = ev.target;
+  var doneBtn = t.closest('[data-done]');
+  var undoBtn = t.closest('[data-undo]');
+  var editBtn = t.closest('[data-edit]');
+  var delAcct = t.closest('[data-del-acct]');
+  var delEntry = t.closest('[data-del-entry]');
+  var heatBtn = t.closest('[data-heat]');
+  var demoBtn = t.closest('[data-demo-toggle]');
+  if (demoBtn) { toggleDemo(); return; }
+  if (demoOn && (doneBtn || undoBtn || editBtn || delAcct || delEntry)) return;
+  if (doneBtn) {
+    var acId = doneBtn.getAttribute('data-done');
+    var ac = S().accounts.find(function (a) { return a.id === acId; });
+    if (!ac) return;
+    var amtEl = document.querySelector('[data-amt="' + acId + '"]');
+    var noteEl = document.querySelector('[data-note="' + acId + '"]');
+    var amt = amtEl ? parseFloat(amtEl.value) : NaN;
+    if (!isFinite(amt) || amt <= 0) amt = ac.amount;
+    var today = todayStr();
+    var exists = S().entries.some(function (e) { return e.accountId === acId && e.date === today; });
+    if (!exists) {
+      S().entries.push({
+        id: uid(), accountId: acId, date: today,
+        amount: Math.round(amt * 100) / 100,
+        note: noteEl ? noteEl.value.trim() : ''
+      });
+      save();
+      vt(function () { renderAll(); if (typeof requestAnimationFrame === 'function') requestAnimationFrame(celebrateCheckin); });
+    }
+    return;
+  }
+  if (undoBtn) {
+    var uId = undoBtn.getAttribute('data-undo');
+    var today2 = todayStr();
+    S().entries = S().entries.filter(function (e) { return !(e.accountId === uId && e.date === today2); });
+    save();
+    vt(renderAll);
+    return;
+  }
+  if (editBtn) {
+    var eId = editBtn.getAttribute('data-edit');
+    var eac = S().accounts.find(function (a) { return a.id === eId; });
+    if (!eac) return;
+    editingId = eId;
+    $('form-title').textContent = 'Edit account';
+    $('form-submit').textContent = 'Save changes';
+    $('form-cancel').style.display = 'inline-block';
+    $('f-name').value = eac.name;
+    $('f-amount').value = eac.amount;
+    $('f-freq').value = eac.freq;
+    $('f-weekday').value = String(eac.weekday);
+    $('f-dom').value = String(eac.dom);
+    $('f-everyn').value = String(eac.everyN);
+    fillColorSwatches(eac.color);
+    syncFreqFields();
+    $('form-card').scrollIntoView({ behavior: motionOK() ? 'smooth' : 'auto' });
+    return;
+  }
+  if (delAcct) {
+    var dId = delAcct.getAttribute('data-del-acct');
+    var dac = S().accounts.find(function (a) { return a.id === dId; });
+    if (dac && confirm('Delete "' + dac.name + '"? Its check-in history will be removed too.')) {
+      S().accounts = S().accounts.filter(function (a) { return a.id !== dId; });
+      S().entries = S().entries.filter(function (e) { return e.accountId !== dId; });
+      if (heatFilter === dId) heatFilter = 'all';
+      save();
+      vt(renderAll);
+    }
+    return;
+  }
+  if (delEntry) {
+    var enId = delEntry.getAttribute('data-del-entry');
+    if (confirm('Delete this check-in?')) {
+      var hrow = delEntry.closest ? delEntry.closest('.row') : null;
+      var hremove = function () {
+        S().entries = S().entries.filter(function (e) { return e.id !== enId; });
+        save();
+        vt(renderAll);
+      };
+      if (motionOK() && hrow) { hrow.classList.add('is-leaving'); setTimeout(hremove, 180); }
+      else hremove();
+    }
+    return;
+  }
+  if (heatBtn) {
+    heatFilter = heatBtn.getAttribute('data-heat');
+    vt(function () { renderFilters(); renderHeatmap(); });
+    return;
+  }
+});
+
+// day-of-month options 1-28
+(function () {
+  var html = '';
+  for (var i = 1; i <= 28; i++) html += '<option value="' + i + '">' + i + '</option>';
+  $('f-dom').innerHTML = html;
+})();
+
+resetForm();
+
+/* ---------- motion system: additive only, no app logic changed ---------- */
+var vtActive = false;
+function motionOK() { try { return !window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return true; } }
+function vt(fn) {
+  if (!motionOK()) { fn(); return; }
+  if (document.startViewTransition) {
+    try {
+      vtActive = true;
+      var tr = document.startViewTransition(fn);
+      if (tr && tr.finished && tr.finished.then) tr.finished.then(function () { vtActive = false; }, function () { vtActive = false; });
+      else setTimeout(function () { vtActive = false; }, 400);
+    } catch (e) { vtActive = false; fn(); }
+  } else fn();
+}
+var prevStreak = null, heroFirst = true;
+function celebrateCheckin() {
+  if (!motionOK()) return;
+  var stEl = document.querySelector('.hero .streak');
+  if (stEl && stEl.animate) stEl.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.14)' }, { transform: 'scale(1)' }], { duration: 340, easing: 'cubic-bezier(.22,1,.36,1)' });
+}
+document.addEventListener('pointerdown', function (ev) {
+  if (!motionOK()) return;
+  var t = ev.target;
+  var b = t && t.closest ? t.closest('button') : null;
+  if (b && b.animate) b.animate([{ transform: 'scale(.97)' }, { transform: 'scale(1)' }], { duration: 150, easing: 'ease-out' });
+});
+
+renderAll();
+</script>
+</body>
+</html>
